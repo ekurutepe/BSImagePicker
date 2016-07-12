@@ -53,7 +53,7 @@ final class PhotoCollectionViewDataSource : NSObject, UICollectionViewDataSource
         super.init()
     }
     
-    func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
     

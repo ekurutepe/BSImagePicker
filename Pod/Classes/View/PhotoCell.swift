@@ -61,16 +61,16 @@ final class PhotoCell: UICollectionViewCell {
             super.isSelected = newValue
             
             if UIView.areAnimationsEnabled() && hasChanged {
-                UIView.animate(TimeInterval(0.1), animations: { () -> Void in
+                UIView.animate(withDuration: TimeInterval(0.1), animations: { () -> Void in
                     // Set alpha for views
                     self.updateAlpha(selected: newValue)
                     
                     // Scale all views down a little
                     self.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
                     }) { (finished: Bool) -> Void in
-                        UIView.animate(TimeInterval(0.1), animations: { () -> Void in
+                        UIView.animate(withDuration: TimeInterval(0.1), animations: { () -> Void in
                             // And then scale them back upp again to give a bounce effect
-                            self.transform = CGAffineTransformMakeScale(1.0, 1.0)
+                            self.transform = CGAffineTransform(scaleX: 1.0, y: 1.0)
                             }, completion: nil)
                 }
             } else {

@@ -53,7 +53,10 @@ Used as an overlay on selected cells
         let group = CGRect(x: checkmarkFrame.minX + 3, y: checkmarkFrame.minY + 3, width: checkmarkFrame.width - 6, height: checkmarkFrame.height - 6)
         
         //// CheckedOval Drawing
-        let checkedOvalPath = UIBezierPath(ovalInRect: CGRectMake(group.minX + floor(group.width * 0.0 + 0.5), group.minY + floor(group.height * 0.0 + 0.5), floor(group.width * 1.0 + 0.5) - floor(group.width * 0.0 + 0.5), floor(group.height * 1.0 + 0.5) - floor(group.height * 0.0 + 0.5)))
+        let checkedOvalPath = UIBezierPath(ovalInRect: CGRect(x: group.minX + floor(group.width * 0.0 + 0.5),
+            y:group.minY + floor(group.height * 0.0 + 0.5),
+            width: floor(group.width * 1.0 + 0.5) - floor(group.width * 0.0 + 0.5),
+            height: floor(group.height * 1.0 + 0.5) - floor(group.height * 0.0 + 0.5)))
         context!.saveGState()
         context!.setShadow(offset: shadow2Offset, blur: shadow2BlurRadius, color: settings.selectionShadowColor.cgColor)
         settings.selectionFillColor.setFill()
@@ -80,11 +83,12 @@ Used as an overlay on selected cells
         }
         
         //// Bezier Drawing (Picture Number)
-        let size = selectionString.sizeattributes: (settings.selectionTextAttributes)
+        let size = selectionString.size(attributes: (settings.selectionTextAttributes))
 
-        selectionString.draw(CGRectMake(checkmarkFrame.midX - size.width / 2.0,
-            checkmarkFrame.midY - size.height / 2.0,
-            size.width,
-            size.height), withAttributes: settings.selectionTextAttributes)
+        selectionString.draw
+//         CGRectMake(checkmarkFrame.midX - size.width / 2.0,
+//            CGRectGetMidY(checkmarkFrame) - size.height / 2.0,
+//            size.width,
+//            size.height), withAttributes: settings.selectionTextAttributes)
     }
 }

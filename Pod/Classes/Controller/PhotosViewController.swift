@@ -201,7 +201,7 @@ final class PhotosViewController : UICollectionViewController {
             }
             
             // Re-enable recognizer, after animation is done
-            dispatch_time(dispatch_time_t(DISPATCH_TIME_NOW), Int64(expandAnimator.transitionDuration(using: nil) * Double(NSEC_PER_SEC))).after(DispatchTime.nowwhen: DispatchQueue.main(), execute: { () -> Void in
+            dispatch_after(DispatchTime.now(dispatch_time_t(DISPATCH_TIME_NOW), Int64(expandAnimator.transitionDuration(using: nil) * Double(NSEC_PER_SEC))), dispatch_get_main_queue(), { () -> Void in
                 sender.isEnabled = true
                 self.collectionView?.isUserInteractionEnabled = true
             })
@@ -339,7 +339,7 @@ final class PhotosViewController : UICollectionViewController {
 
 // MARK: UICollectionViewDelegate
 extension PhotosViewController {
-    override func collectionView(collectionView: UICollectionView, shouldSelectItemAtIndexPath indexPath: NSIndexPath) -> Bool {
+    override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
         // Camera shouldn't be selected, but pop the UIImagePickerController!
         if let composedDataSource = composedDataSource where composedDataSource.dataSources[indexPath.section].isEqual(cameraDataSource) {
             let cameraController = UIImagePickerController()
@@ -355,7 +355,7 @@ extension PhotosViewController {
         return collectionView.isUserInteractionEnabled && photosDataSource!.selections.count < settings.maxNumberOfSelections
     }
     
-    override func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
+    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard let photosDataSource = photosDataSource, let cell = collectionView.cellForItem(at: indexPath as IndexPath) as? PhotoCell, let asset = photosDataSource.fetchResult.object(at: indexPath.row) as? PHAsset else {
             return
         }
@@ -375,19 +375,19 @@ extension PhotosViewController {
         
         // Call selection closure
         if let closure = selectionClosure {
-            dispatch_get_global_queue(0, 0).asynchronously(DispatchQueue.globalexecute: { () -> Void in
+            DispatchQueue.global().async{ () -> Void in
                 closure(asset: asset)
-            })
+            }
         }
     }
     
-    override func collectionView(collectionView: UICollectionView, didDeselectItemAtIndexPath indexPath: NSIndexPath) {
+    override func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
         guard let photosDataSource = photosDataSource, let asset = photosDataSource.fetchResult.object(at: indexPath.row) as? PHAsset, let index = photosDataSource.selections.index(of: asset) else {
             return
         }
         
         // Deselect asset
-        photosDataSource.selections.remove(index)
+        photosDataSource.selections.remove(at: index)
         
         // Update done button
         updateDoneButton()
@@ -402,13 +402,13 @@ extension PhotosViewController {
         
         // Call deselection closure
         if let closure = deselectionClosure {
-            dispatch_get_global_queue(0, 0).asynchronously(DispatchQueue.globalexecute: { () -> Void in
+            DispatchQueue.global().async {
                 closure(asset: asset)
-            })
+            }
         }
     }
     
-    override func collectionView(collectionView: UICollectionView, willDisplayCell cell: UICollectionViewCell, forItemAtIndexPath indexPath: NSIndexPath) {
+    override func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         guard let cell = cell as? CameraCell else {
             return
         }
@@ -423,13 +423,13 @@ extension PhotosViewController: UIPopoverPresentationControllerDelegate {
         return .none
     }
     
-    func popoverPresentationControllerShouldDismissPopover(popoverPresentationController: UIPopoverPresentationController) -> Bool {
+    func popoverPresentationControllerShouldDismissPopover(_ popoverPresentationController: UIPopoverPresentationController) -> Bool {
         return true
     }
 }
 // MARK: UINavigationControllerDelegate
 extension PhotosViewController: UINavigationControllerDelegate {
-    func navigationController(navigationController: UINavigationController, animationControllerForOperation operation: UINavigationControllerOperation, fromViewController fromVC: UIViewController, toViewController toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    func navigationController(_ navigationController: UINavigationController, interactionControllerFor animationController: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
         if operation == .push {
             return expandAnimator
         } else {
@@ -440,14 +440,12 @@ extension PhotosViewController: UINavigationControllerDelegate {
 
 // MARK: UITableViewDelegate
 extension PhotosViewController: UITableViewDelegate {
-    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) -> () {
         // Update photos data source
-        if let album = albumsDataSource.fetchResults[indexPath.section][indexPath.row] as? PHAssetCollection {
-            initializePhotosDataSource(album: album)
-            updateAlbumTitle(album: album)
-            synchronizeCollectionView()
-        }
-        
+        let album = albumsDataSource.fetchResults[indexPath.section][indexPath.row]
+        initializePhotosDataSource(album: album)
+        updateAlbumTitle(album: album)
+        synchronizeCollectionView()
         // Dismiss album selection
         albumsViewController.dismiss(animated: true, completion: nil)
     }
@@ -502,7 +500,7 @@ extension PhotosViewController: UIImagePickerControllerDelegate {
                         })
                     }
                     
-                    picker.dismiss(true, completion: nil)
+                    picker.dismiss(animated: true, completion: nil)
                 }
         })
     }
