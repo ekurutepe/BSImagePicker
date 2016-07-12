@@ -50,48 +50,45 @@ final class AlbumTableViewDataSource : NSObject, UITableViewDataSource {
         cachingManager?.allowsCachingHighQualityImages = false
         
         // Fetch album
-        if let album = fetchResults[indexPath.section][indexPath.row] as? PHAssetCollection {
-            // Title
-            cell.albumTitleLabel.text = album.localizedTitle
-            
-            // Selection style
-            cell.selectionStyle = .none
-            
-            let fetchOptions = PHFetchOptions()
-            fetchOptions.sortDescriptors = [
-                SortDescriptor(key: "creationDate", ascending: false)
-            ]
-            fetchOptions.predicate = Predicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
-            
-            let result = PHAsset.fetchAssets(in: album, options: fetchOptions)
-            result.enumerateObjects({ (object, idx, stop) in
-                if let asset = object as? PHAsset {
-                    let imageSize = CGSize(width: 79, height: 79)
-                    let imageContentMode: PHImageContentMode = .aspectFill
-                    switch idx {
-                    case 0:
-                        PHCachingImageManager.default().requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
-                            cell.firstImageView.image = result
-                            cell.secondImageView.image = result
-                            cell.thirdImageView.image = result
-                        }
-                    case 1:
-                        PHCachingImageManager.default().requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
-                            cell.secondImageView.image = result
-                            cell.thirdImageView.image = result
-                        }
-                    case 2:
-                        PHCachingImageManager.default().requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
-                            cell.thirdImageView.image = result
-                        }
-                        
-                    default:
-                        // Stop enumeration
-                        stop.initialize(with: true)
-                    }
+        let album = fetchResults[indexPath.section][indexPath.row]
+        // Title
+        cell.albumTitleLabel.text = album.localizedTitle
+        
+        // Selection style
+        cell.selectionStyle = .none
+        
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [
+            SortDescriptor(key: "creationDate", ascending: false)
+        ]
+        fetchOptions.predicate = Predicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        
+        let result = PHAsset.fetchAssets(in: album, options: fetchOptions)
+        result.enumerateObjects({ (asset, idx, stop) in
+            let imageSize = CGSize(width: 79, height: 79)
+            let imageContentMode: PHImageContentMode = .aspectFill
+            switch idx {
+            case 0:
+                PHCachingImageManager.default().requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
+                    cell.firstImageView.image = result
+                    cell.secondImageView.image = result
+                    cell.thirdImageView.image = result
                 }
-            })
-        }
+            case 1:
+                PHCachingImageManager.default().requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
+                    cell.secondImageView.image = result
+                    cell.thirdImageView.image = result
+                }
+            case 2:
+                PHCachingImageManager.default().requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
+                    cell.thirdImageView.image = result
+                }
+                
+            default:
+                // Stop enumeration
+                stop.initialize(with: true)
+            }
+        })
         
         return cell
     }

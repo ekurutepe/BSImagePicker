@@ -28,7 +28,7 @@ Gives UICollectionViewDataSource functionality with a given data source and cell
 */
 final class PhotoCollectionViewDataSource : NSObject, UICollectionViewDataSource {
     var selections = [PHAsset]()
-    var fetchResult: PHFetchResult<AnyObject>
+    var fetchResult: PHFetchResult<PHAsset>
     
     private let photoCellIdentifier = "photoCellIdentifier"
     private let photosManager = PHCachingImageManager.default()
@@ -37,16 +37,16 @@ final class PhotoCollectionViewDataSource : NSObject, UICollectionViewDataSource
     let settings: BSImagePickerSettings?
     var imageSize: CGSize = CGSize()
     
-  init(fetchResult: PHFetchResult<AnyObject>, selections: PHFetchResult<AnyObject>? = nil, settings: BSImagePickerSettings?) {
+  init(fetchResult: PHFetchResult<PHAsset>, selections: PHFetchResult<AnyObject>? = nil, settings: BSImagePickerSettings?) {
         self.fetchResult = fetchResult
         self.settings = settings
         if let selections = selections {
             var selectionsArray = [PHAsset]()
-            selections.enumerateObjects { (asset, idx, stop) -> Void in
+            selections.enumerateObjects({ (asset, idx, stop) -> Void in
                 if let asset = asset as? PHAsset {
                     selectionsArray.append(asset)
                 }
-            }
+            })
             self.selections = selectionsArray
         }
     
@@ -73,27 +73,27 @@ final class PhotoCollectionViewDataSource : NSObject, UICollectionViewDataSource
             photosManager.cancelImageRequest(PHImageRequestID(cell.tag))
         }
         
-        if let asset = fetchResult[indexPath.row] as? PHAsset {
-            cell.asset = asset
+        let asset = fetchResult[indexPath.row]
+        cell.asset = asset
             
-            // Request image
-            cell.tag = Int(photosManager.requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
-                cell.imageView.image = result
-            })
+        // Request image
+        cell.tag = Int(photosManager.requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
+            cell.imageView.image = result
+        })
             
             // Set selection number
-            if let asset = fetchResult[indexPath.row] as? PHAsset, let index = selections.index(of: asset) {
-                if let character = settings?.selectionCharacter {
-                    cell.selectionString = String(character)
-                } else {
-                    cell.selectionString = String(index+1)
-                }
-                
-                cell.isSelected = true
+        if let index = selections.index(of: asset) {
+            if let character = settings?.selectionCharacter {
+                cell.selectionString = String(character)
             } else {
-                cell.isSelected = false
+                cell.selectionString = String(index+1)
             }
+            
+            cell.isSelected = true
+        } else {
+            cell.isSelected = false
         }
+        
         
         UIView.setAnimationsEnabled(true)
         
