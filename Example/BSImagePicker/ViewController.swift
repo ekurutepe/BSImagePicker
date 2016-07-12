@@ -26,7 +26,7 @@ import Photos
 
 class ViewController: UIViewController {
     
-    @IBAction func showImagePicker(sender: UIButton) {
+    @IBAction func showImagePicker(_ sender: UIButton) {
         let vc = BSImagePickerViewController()
         vc.maxNumberOfSelections = 6
         
@@ -42,7 +42,7 @@ class ViewController: UIViewController {
             }, completion: nil)
     }
     
-    @IBAction func showCustomImagePicker(sender: UIButton) {
+    @IBAction func showCustomImagePicker(_ sender: UIButton) {
         let vc = BSImagePickerViewController()
         vc.maxNumberOfSelections = 6
         vc.takePhotoIcon = UIImage(named: "chat")
@@ -80,17 +80,17 @@ class ViewController: UIViewController {
             }, completion: nil)
     }
   
-    @IBAction func showImagePickerWithSelectedAssets(sender: UIButton) {
-        let allAssets = PHAsset.fetchAssetsWithMediaType(PHAssetMediaType.Image, options: nil)
+    @IBAction func showImagePickerWithSelectedAssets(_ sender: UIButton) {
+        let allAssets = PHAsset.fetchAssets(with: PHAssetMediaType.image, options: nil)
         var evenAssetIds = [String]()
       
-        allAssets.enumerateObjectsUsingBlock { (asset, idx, stop) -> Void in
+        allAssets.enumerateObjects { (asset, idx, stop) -> Void in
           if let asset = asset as? PHAsset where idx % 2 == 0 {
             evenAssetIds.append(asset.localIdentifier)
           }
         }
       
-        let evenAssets = PHAsset.fetchAssetsWithLocalIdentifiers(evenAssetIds, options: nil)
+        let evenAssets = PHAsset.fetchAssets(withLocalIdentifiers: evenAssetIds, options: nil)
       
         let vc = BSImagePickerViewController()
         vc.defaultSelections = evenAssets
