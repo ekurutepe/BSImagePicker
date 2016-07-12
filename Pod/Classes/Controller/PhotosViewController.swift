@@ -42,7 +42,7 @@ final class PhotosViewController : UICollectionViewController {
     private let cameraDataSource: CameraCollectionViewDataSource
     private var composedDataSource: ComposedCollectionViewDataSource?
     
-    private var defaultSelections: PHFetchResult?
+    private var defaultSelections: PHFetchResult<AnyObject>?
     
     let settings: BSImagePickerSettings
     
@@ -61,15 +61,15 @@ final class PhotosViewController : UICollectionViewController {
         return PreviewViewController(nibName: nil, bundle: nil)
     }()
     
-    required init(fetchResults: [PHFetchResult], defaultSelections: PHFetchResult? = nil, settings aSettings: BSImagePickerSettings) {
+    required init(fetchResults: [PHFetchResult<PHAssetCollection>], defaultSelections: PHFetchResult<AnyObject>? = nil, settings aSettings: BSImagePickerSettings) {
         albumsDataSource = AlbumTableViewDataSource(fetchResults: fetchResults)
-        cameraDataSource = CameraCollectionViewDataSource(settings: aSettings, cameraAvailable: UIImagePickerController.isSourceTypeAvailable(.Camera))
+        cameraDataSource = CameraCollectionViewDataSource(settings: aSettings, cameraAvailable: UIImagePickerController.isSourceTypeAvailable(.camera))
         self.defaultSelections = defaultSelections
         settings = aSettings
         
         super.init(collectionViewLayout: GridCollectionViewLayout())
         
-        PHPhotoLibrary.sharedPhotoLibrary().registerChangeObserver(self)
+        PHPhotoLibrary.shared().register(self)
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -77,14 +77,14 @@ final class PhotosViewController : UICollectionViewController {
     }
     
     deinit {
-        PHPhotoLibrary.sharedPhotoLibrary().unregisterChangeObserver(self)
+        PHPhotoLibrary.shared().unregisterChangeObserver(self)
     }
     
     override func loadView() {
         super.loadView()
         
         // Setup collection view
-        collectionView?.backgroundColor = UIColor.whiteColor()
+        collectionView?.backgroundColor = UIColor.white()
         collectionView?.allowsMultipleSelection = true
         
         // Set an empty title to get < back button
@@ -95,14 +95,14 @@ final class PhotosViewController : UICollectionViewController {
         doneBarButton?.action = #selector(PhotosViewController.doneButtonPressed(_:))
         cancelBarButton?.target = self
         cancelBarButton?.action = #selector(PhotosViewController.cancelButtonPressed(_:))
-        albumTitleView?.albumButton?.addTarget(self, action: #selector(PhotosViewController.albumButtonPressed(_:)), forControlEvents: .TouchUpInside)
+        albumTitleView?.albumButton?.addTarget(self, action: #selector(PhotosViewController.albumButtonPressed(_:)), for: .TouchUpInside)
         navigationItem.leftBarButtonItem = cancelBarButton
         navigationItem.rightBarButtonItem = doneBarButton
         navigationItem.titleView = albumTitleView
 
         if let album = albumsDataSource.fetchResults.first?.firstObject as? PHAssetCollection {
-            initializePhotosDataSource(album, selections: defaultSelections)
-            updateAlbumTitle(album)
+            initializePhotosDataSource(album: album, selections: defaultSelections)
+            updateAlbumTitle(album: album)
             synchronizeCollectionView()
         }
         
@@ -115,12 +115,12 @@ final class PhotosViewController : UICollectionViewController {
         navigationController?.delegate = self
         
         // Register cells
-        photosDataSource?.registerCellIdentifiersForCollectionView(collectionView)
-        cameraDataSource.registerCellIdentifiersForCollectionView(collectionView)
+        photosDataSource?.registerCellIdentifiersForCollectionView(collectionView: collectionView)
+        cameraDataSource.registerCellIdentifiersForCollectionView(collectionView: collectionView)
     }
     
     // MARK: Appear/Disappear
-    override func viewWillAppear(animated: Bool) {
+    override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         updateDoneButton()
@@ -129,28 +129,28 @@ final class PhotosViewController : UICollectionViewController {
     // MARK: Button actions
     func cancelButtonPressed(sender: UIBarButtonItem) {
         guard let closure = cancelClosure, let photosDataSource = photosDataSource else {
-            dismissViewControllerAnimated(true, completion: nil)
+            dismiss(animated: true, completion: nil)
             return
         }
         
-        dispatch_async(dispatch_get_global_queue(0, 0), { () -> Void in
+        DispatchQueue.global(0, 0).asynchronously(execute: { () -> Void in
             closure(assets: photosDataSource.selections)
         })
         
-        dismissViewControllerAnimated(true, completion: nil)
+        dismiss(animated: true, completion: nil)
     }
     
     func doneButtonPressed(sender: UIBarButtonItem) {
         guard let closure = finishClosure, let photosDataSource = photosDataSource else {
-            dismissViewControllerAnimated(true, completion: nil)
+            dismiss(animated: true, completion: nil)
             return
         }
         
-        dispatch_async(dispatch_get_global_queue(0, 0), { () -> Void in
+        DispatchQueue.global(0, 0).asynchronously(execute: { () -> Void in
             closure(assets: photosDataSource.selections)
         })
         
-        dismissViewControllerAnimated(true, completion: nil)
+        dismiss(animated: true, completion: nil)
     }
     
     func albumButtonPressed(sender: UIButton) {
@@ -158,35 +158,35 @@ final class PhotosViewController : UICollectionViewController {
             return
         }
         
-        popVC.permittedArrowDirections = .Up
+        popVC.permittedArrowDirections = .up
         popVC.sourceView = sender
-        let senderRect = sender.convertRect(sender.frame, fromView: sender.superview)
+        let senderRect = sender.convert(sender.frame, from: sender.superview)
         let sourceRect = CGRect(x: senderRect.origin.x, y: senderRect.origin.y + (sender.frame.size.height / 2), width: senderRect.size.width, height: senderRect.size.height)
         popVC.sourceRect = sourceRect
         popVC.delegate = self
         albumsViewController.tableView.reloadData()
         
-        presentViewController(albumsViewController, animated: true, completion: nil)
+        present(albumsViewController, animated: true, completion: nil)
     }
     
     func collectionViewLongPressed(sender: UIGestureRecognizer) {
-        if sender.state == .Began {
+        if sender.state == .began {
             // Disable recognizer while we are figuring out location and pushing preview
-            sender.enabled = false
-            collectionView?.userInteractionEnabled = false
+            sender.isEnabled = false
+            collectionView?.isUserInteractionEnabled = false
             
             // Calculate which index path long press came from
-            let location = sender.locationInView(collectionView)
-            let indexPath = collectionView?.indexPathForItemAtPoint(location)
+            let location = sender.location(in: collectionView)
+            let indexPath = collectionView?.indexPathForItem(at: location)
             
-            if let vc = previewViewContoller, let indexPath = indexPath, let cell = collectionView?.cellForItemAtIndexPath(indexPath) as? PhotoCell, let asset = cell.asset {
+            if let vc = previewViewContoller, let indexPath = indexPath, let cell = collectionView?.cellForItem(at: indexPath) as? PhotoCell, let asset = cell.asset {
                 // Setup fetch options to be synchronous
                 let options = PHImageRequestOptions()
-                options.synchronous = true
+                options.isSynchronous = true
                 
                 // Load image for preview
                 if let imageView = vc.imageView {
-                    PHCachingImageManager.defaultManager().requestImageForAsset(asset, targetSize:imageView.frame.size, contentMode: .AspectFit, options: options) { (result, _) in
+                    PHCachingImageManager.default().requestImage(for: asset, targetSize:imageView.frame.size, contentMode: .aspectFit, options: options) { (result, _) in
                         imageView.image = result
                     }
                 }
@@ -201,9 +201,9 @@ final class PhotosViewController : UICollectionViewController {
             }
             
             // Re-enable recognizer, after animation is done
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(expandAnimator.transitionDuration(nil) * Double(NSEC_PER_SEC))), dispatch_get_main_queue(), { () -> Void in
-                sender.enabled = true
-                self.collectionView?.userInteractionEnabled = true
+            dispatch_time(dispatch_time_t(DISPATCH_TIME_NOW), Int64(expandAnimator.transitionDuration(using: nil) * Double(NSEC_PER_SEC))).after(DispatchTime.nowwhen: DispatchQueue.main(), execute: { () -> Void in
+                sender.isEnabled = true
+                self.collectionView?.isUserInteractionEnabled = true
             })
         }
     }
@@ -213,10 +213,10 @@ final class PhotosViewController : UICollectionViewController {
         // Find right button
         if let subViews = navigationController?.navigationBar.subviews, let photosDataSource = photosDataSource {
             for view in subViews {
-                if let btn = view as? UIButton where checkIfRightButtonItem(btn) {
+                if let btn = view as? UIButton where checkIfRightButtonItem(btn: btn) {
                     // Store original title if we havn't got it
                     if doneBarButtonTitle == nil {
-                        doneBarButtonTitle = btn.titleForState(.Normal)
+                        doneBarButtonTitle = btn.title(for: .normal)
                     }
                     
                     // Update title
@@ -224,15 +224,15 @@ final class PhotosViewController : UICollectionViewController {
                         // Special case if we have selected 1 image and that is
                         // the max number of allowed selections
                         if (photosDataSource.selections.count == 1 && self.settings.maxNumberOfSelections == 1) {
-                            btn.bs_setTitleWithoutAnimation("\(doneBarButtonTitle)", forState: .Normal)
+                            btn.bs_setTitleWithoutAnimation(title: "\(doneBarButtonTitle)", forState: .normal)
                         } else if photosDataSource.selections.count > 0 {
-                            btn.bs_setTitleWithoutAnimation("\(doneBarButtonTitle) (\(photosDataSource.selections.count))", forState: .Normal)
+                            btn.bs_setTitleWithoutAnimation(title: "\(doneBarButtonTitle) (\(photosDataSource.selections.count))", forState: .normal)
                         } else {
-                            btn.bs_setTitleWithoutAnimation(doneBarButtonTitle, forState: .Normal)
+                            btn.bs_setTitleWithoutAnimation(title: doneBarButtonTitle, forState: .normal)
                         }
                         
                         // Enabled?
-                        doneBarButton?.enabled = photosDataSource.selections.count > 0
+                        doneBarButton?.isEnabled = photosDataSource.selections.count > 0
                     }
                     
                     // Stop loop
@@ -250,20 +250,20 @@ final class PhotosViewController : UICollectionViewController {
         }
         
         // Store previous values
-        let wasRightEnabled = rightButton.enabled
-        let wasButtonEnabled = btn.enabled
+        let wasRightEnabled = rightButton.isEnabled
+        let wasButtonEnabled = btn.isEnabled
         
         // Set a known state for both buttons
-        rightButton.enabled = false
-        btn.enabled = false
+        rightButton.isEnabled = false
+        btn.isEnabled = false
         
         // Change one and see if other also changes
-        rightButton.enabled = true
-        let isRightButton = btn.enabled
+        rightButton.isEnabled = true
+        let isRightButton = btn.isEnabled
         
         // Reset
-        rightButton.enabled = wasRightEnabled
-        btn.enabled = wasButtonEnabled
+        rightButton.isEnabled = wasRightEnabled
+        btn.isEnabled = wasButtonEnabled
         
         return isRightButton
     }
@@ -276,18 +276,18 @@ final class PhotosViewController : UICollectionViewController {
         // Get indexes of the selected assets
         let mutableIndexSet = NSMutableIndexSet()
         for object in photosDataSource.selections {
-            let index = photosDataSource.fetchResult.indexOfObject(object)
+            let index = photosDataSource.fetchResult.index(of: object)
             if index != NSNotFound {
-                mutableIndexSet.addIndex(index)
+                mutableIndexSet.add(index)
             }
         }
         
         // Convert into index paths
-        let indexPaths = mutableIndexSet.bs_indexPathsForSection(1)
+        let indexPaths = mutableIndexSet.bs_indexPathsForSection(section: 1)
         
         // Loop through them and set them as selected in the collection view
         for indexPath in indexPaths {
-            collectionView.selectItemAtIndexPath(indexPath, animated: false, scrollPosition: .None)
+            collectionView.selectItem(at: indexPath as IndexPath, animated: false, scrollPosition: .none)
         }
     }
     
@@ -298,17 +298,17 @@ final class PhotosViewController : UICollectionViewController {
         }
     }
     
-  func initializePhotosDataSource(album: PHAssetCollection, selections: PHFetchResult? = nil) {
+  func initializePhotosDataSource(album: PHAssetCollection, selections: PHFetchResult<AnyObject>? = nil) {
         // Set up a photo data source with album
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [
-            NSSortDescriptor(key: "creationDate", ascending: false)
+            SortDescriptor(key: "creationDate", ascending: false)
         ]
-        fetchOptions.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.Image.rawValue)
-        initializePhotosDataSourceWithFetchResult(PHAsset.fetchAssetsInAssetCollection(album, options: fetchOptions), selections: selections)
+        fetchOptions.predicate = Predicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        initializePhotosDataSourceWithFetchResult(fetchResult: PHAsset.fetchAssets(in: album, options: fetchOptions), selections: selections)
     }
     
-    func initializePhotosDataSourceWithFetchResult(fetchResult: PHFetchResult, selections: PHFetchResult? = nil) {
+    func initializePhotosDataSourceWithFetchResult(fetchResult: PHFetchResult<AnyObject>, selections: PHFetchResult<AnyObject>? = nil) {
         let newDataSource = PhotoCollectionViewDataSource(fetchResult: fetchResult, selections: selections, settings: settings)
         
         // Transfer image size
@@ -333,7 +333,7 @@ final class PhotosViewController : UICollectionViewController {
         
         // Reload and sync selections
         collectionView.reloadData()
-        synchronizeSelectionInCollectionView(collectionView)
+        synchronizeSelectionInCollectionView(collectionView: collectionView)
     }
 }
 
@@ -344,19 +344,19 @@ extension PhotosViewController {
         if let composedDataSource = composedDataSource where composedDataSource.dataSources[indexPath.section].isEqual(cameraDataSource) {
             let cameraController = UIImagePickerController()
             cameraController.allowsEditing = false
-            cameraController.sourceType = .Camera
+            cameraController.sourceType = .camera
             cameraController.delegate = self
             
-            self.presentViewController(cameraController, animated: true, completion: nil)
+            self.present(cameraController, animated: true, completion: nil)
             
             return false
         }
         
-        return collectionView.userInteractionEnabled && photosDataSource!.selections.count < settings.maxNumberOfSelections
+        return collectionView.isUserInteractionEnabled && photosDataSource!.selections.count < settings.maxNumberOfSelections
     }
     
     override func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
-        guard let photosDataSource = photosDataSource, let cell = collectionView.cellForItemAtIndexPath(indexPath) as? PhotoCell, let asset = photosDataSource.fetchResult.objectAtIndex(indexPath.row) as? PHAsset else {
+        guard let photosDataSource = photosDataSource, let cell = collectionView.cellForItem(at: indexPath as IndexPath) as? PhotoCell, let asset = photosDataSource.fetchResult.object(at: indexPath.row) as? PHAsset else {
             return
         }
         
@@ -375,19 +375,19 @@ extension PhotosViewController {
         
         // Call selection closure
         if let closure = selectionClosure {
-            dispatch_async(dispatch_get_global_queue(0, 0), { () -> Void in
+            dispatch_get_global_queue(0, 0).asynchronously(DispatchQueue.globalexecute: { () -> Void in
                 closure(asset: asset)
             })
         }
     }
     
     override func collectionView(collectionView: UICollectionView, didDeselectItemAtIndexPath indexPath: NSIndexPath) {
-        guard let photosDataSource = photosDataSource, let asset = photosDataSource.fetchResult.objectAtIndex(indexPath.row) as? PHAsset, let index = photosDataSource.selections.indexOf(asset) else {
+        guard let photosDataSource = photosDataSource, let asset = photosDataSource.fetchResult.object(at: indexPath.row) as? PHAsset, let index = photosDataSource.selections.index(of: asset) else {
             return
         }
         
         // Deselect asset
-        photosDataSource.selections.removeAtIndex(index)
+        photosDataSource.selections.remove(index)
         
         // Update done button
         updateDoneButton()
@@ -395,14 +395,14 @@ extension PhotosViewController {
         // Reload selected cells to update their selection number
         if let selectedIndexPaths = collectionView.indexPathsForSelectedItems() {
             UIView.setAnimationsEnabled(false)
-            collectionView.reloadItemsAtIndexPaths(selectedIndexPaths)
-            synchronizeSelectionInCollectionView(collectionView)
+            collectionView.reloadItems(at: selectedIndexPaths)
+            synchronizeSelectionInCollectionView(collectionView: collectionView)
             UIView.setAnimationsEnabled(true)
         }
         
         // Call deselection closure
         if let closure = deselectionClosure {
-            dispatch_async(dispatch_get_global_queue(0, 0), { () -> Void in
+            dispatch_get_global_queue(0, 0).asynchronously(DispatchQueue.globalexecute: { () -> Void in
                 closure(asset: asset)
             })
         }
@@ -420,7 +420,7 @@ extension PhotosViewController {
 // MARK: UIPopoverPresentationControllerDelegate
 extension PhotosViewController: UIPopoverPresentationControllerDelegate {
     func adaptivePresentationStyleForPresentationController(controller: UIPresentationController) -> UIModalPresentationStyle {
-        return .None
+        return .none
     }
     
     func popoverPresentationControllerShouldDismissPopover(popoverPresentationController: UIPopoverPresentationController) -> Bool {
@@ -430,7 +430,7 @@ extension PhotosViewController: UIPopoverPresentationControllerDelegate {
 // MARK: UINavigationControllerDelegate
 extension PhotosViewController: UINavigationControllerDelegate {
     func navigationController(navigationController: UINavigationController, animationControllerForOperation operation: UINavigationControllerOperation, fromViewController fromVC: UIViewController, toViewController toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
-        if operation == .Push {
+        if operation == .push {
             return expandAnimator
         } else {
             return shrinkAnimator
@@ -443,19 +443,19 @@ extension PhotosViewController: UITableViewDelegate {
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         // Update photos data source
         if let album = albumsDataSource.fetchResults[indexPath.section][indexPath.row] as? PHAssetCollection {
-            initializePhotosDataSource(album)
-            updateAlbumTitle(album)
+            initializePhotosDataSource(album: album)
+            updateAlbumTitle(album: album)
             synchronizeCollectionView()
         }
         
         // Dismiss album selection
-        albumsViewController.dismissViewControllerAnimated(true, completion: nil)
+        albumsViewController.dismiss(animated: true, completion: nil)
     }
 }
 
 // MARK: Traits
 extension PhotosViewController {
-    override func traitCollectionDidChange(previousTraitCollection: UITraitCollection?) {
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         
         if let collectionViewFlowLayout = collectionViewLayout as? GridCollectionViewLayout {
@@ -476,51 +476,51 @@ extension PhotosViewController {
 extension PhotosViewController: UIImagePickerControllerDelegate {
     func imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : AnyObject]) {
         guard let image = info[UIImagePickerControllerOriginalImage] as? UIImage else {
-            picker.dismissViewControllerAnimated(true, completion: nil)
+            picker.dismiss(animated: true, completion: nil)
             return
         }
         
         var placeholder: PHObjectPlaceholder?
-        PHPhotoLibrary.sharedPhotoLibrary().performChanges({
-            let request = PHAssetChangeRequest.creationRequestForAssetFromImage(image)
+        PHPhotoLibrary.shared().performChanges({
+            let request = PHAssetChangeRequest.creationRequestForAsset(from: image)
             placeholder = request.placeholderForCreatedAsset
             }, completionHandler: { success, error in
-                guard let placeholder = placeholder, let asset = PHAsset.fetchAssetsWithLocalIdentifiers([placeholder.localIdentifier], options: nil).firstObject as? PHAsset where success == true else {
-                    picker.dismissViewControllerAnimated(true, completion: nil)
+                guard let placeholder = placeholder, let asset = PHAsset.fetchAssets(withLocalIdentifiers: [placeholder.localIdentifier], options: nil).firstObject as? PHAsset where success == true else {
+                    picker.dismiss(animated: true, completion: nil)
                     return
                 }
                 
-                dispatch_async(dispatch_get_main_queue()) {
+                DispatchQueue.main.asynchronously() {
                     // TODO: move to a function. this is duplicated in didSelect
                     self.photosDataSource?.selections.append(asset)
                     self.updateDoneButton()
                     
                     // Call selection closure
                     if let closure = self.selectionClosure {
-                        dispatch_async(dispatch_get_global_queue(0, 0), { () -> Void in
+                        DispatchQueue.global(0, 0).asynchronously(execute: { () -> Void in
                             closure(asset: asset)
                         })
                     }
                     
-                    picker.dismissViewControllerAnimated(true, completion: nil)
+                    picker.dismiss(true, completion: nil)
                 }
         })
     }
     
     func imagePickerControllerDidCancel(picker: UIImagePickerController) {
-        picker.dismissViewControllerAnimated(true, completion: nil)
+        picker.dismiss(animated: true, completion: nil)
     }
 }
 
 // MARK: PHPhotoLibraryChangeObserver
 extension PhotosViewController: PHPhotoLibraryChangeObserver {
-    func photoLibraryDidChange(changeInstance: PHChange) {
+    func photoLibraryDidChange(_ changeInstance: PHChange) {
         guard let photosDataSource = photosDataSource, let collectionView = collectionView else {
             return
         }
         
-        dispatch_async(dispatch_get_main_queue(), { () -> Void in
-            if let photosChanges = changeInstance.changeDetailsForFetchResult(photosDataSource.fetchResult) {
+        DispatchQueue.main.asynchronously(execute: { () -> Void in
+            if let photosChanges = changeInstance.changeDetails(for: photosDataSource.fetchResult) {
                 // Update collection view
                 // Alright...we get spammed with change notifications, even when there are none. So guard against it
                 if photosChanges.hasIncrementalChanges && (photosChanges.removedIndexes?.count > 0 || photosChanges.insertedIndexes?.count > 0 || photosChanges.changedIndexes?.count > 0) {
@@ -548,7 +548,7 @@ extension PhotosViewController: PHPhotoLibraryChangeObserver {
                     //                    }
                     
                     // Sync selection
-                    self.synchronizeSelectionInCollectionView(collectionView)
+                    self.synchronizeSelectionInCollectionView(collectionView: collectionView)
                 } else if photosChanges.hasIncrementalChanges == false {
                     // Update fetch result
                     photosDataSource.fetchResult = photosChanges.fetchResultAfterChanges
@@ -556,7 +556,7 @@ extension PhotosViewController: PHPhotoLibraryChangeObserver {
                     collectionView.reloadData()
                     
                     // Sync selection
-                    self.synchronizeSelectionInCollectionView(collectionView)
+                    self.synchronizeSelectionInCollectionView(collectionView: collectionView)
                 }
             }
         })

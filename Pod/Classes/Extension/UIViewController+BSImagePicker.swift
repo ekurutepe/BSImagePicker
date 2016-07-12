@@ -50,7 +50,7 @@ public extension UIViewController {
             imagePicker.photosViewController.finishClosure = finish
             
             // Present
-            self.presentViewController(imagePicker, animated: animated, completion: completion)
+            self.present(imagePicker, animated: animated, completion: completion)
         }
     }
 }

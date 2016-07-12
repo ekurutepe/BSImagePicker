@@ -34,7 +34,7 @@ final class AlbumTitleView: UIView {
         didSet {
             if let imageView = self.albumButton?.imageView, let titleLabel = self.albumButton?.titleLabel {
                 // Set title on button
-                albumButton?.setTitle(self.albumTitle, forState: .Normal)
+                albumButton?.setTitle(self.albumTitle, for: .normal)
                 
                 // Also set title directly to label, since it isn't done right away when setting button title
                 // And we need to know its width to calculate insets
@@ -52,21 +52,21 @@ final class AlbumTitleView: UIView {
         super.awakeFromNib()
         
         // Set image
-        albumButton?.setImage(arrowDownImage, forState: .Normal)
+        albumButton?.setImage(arrowDownImage, for: .normal)
     }
     
     lazy var arrowDownImage: UIImage? = {
         // Get path for BSImagePicker bundle
-        let bundlePath = NSBundle(forClass: PhotosViewController.self).pathForResource("BSImagePicker", ofType: "bundle")
-        let bundle: NSBundle?
+        let bundlePath = Bundle(for: PhotosViewController.self).pathForResource("BSImagePicker", ofType: "bundle")
+        let bundle: Bundle?
         
         // Load bundle
         if let bundlePath = bundlePath {
-            bundle = NSBundle(path: bundlePath)
+            bundle = Bundle(path: bundlePath)
         } else {
             bundle = nil
         }
         
-        return UIImage(named: "arrow_down", inBundle: bundle, compatibleWithTraitCollection: nil)
+        return UIImage(named: "arrow_down", in: bundle, compatibleWith: nil)
     }()
 }

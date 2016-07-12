@@ -26,14 +26,14 @@ final class PreviewViewController : UIViewController {
     var imageView: UIImageView?
     private var fullscreen = false
     
-    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) {
+    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
         
-        view.backgroundColor = UIColor.whiteColor()
+        view.backgroundColor = UIColor.white()
         
         imageView = UIImageView(frame: view.bounds)
-        imageView?.contentMode = .ScaleAspectFit
-        imageView?.autoresizingMask = [.FlexibleWidth, .FlexibleHeight]
+        imageView?.contentMode = .scaleAspectFit
+        imageView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(imageView!)
         
         let tapRecognizer = UITapGestureRecognizer()
@@ -52,7 +52,7 @@ final class PreviewViewController : UIViewController {
     
     func toggleFullscreen() {
         fullscreen = !fullscreen
-        UIView.animateWithDuration(0.3, animations: { () -> Void in
+        UIView.animate(withDuration: 0.3, animations: { () -> Void in
             self.toggleNavigationBar()
             self.toggleStatusBar()
             self.toggleBackgroundColor()
@@ -71,9 +71,9 @@ final class PreviewViewController : UIViewController {
         let aColor: UIColor
         
         if self.fullscreen {
-            aColor = UIColor.blackColor()
+            aColor = UIColor.black()
         } else {
-            aColor = UIColor.whiteColor()
+            aColor = UIColor.white()
         }
         
         self.view.backgroundColor = aColor

@@ -33,8 +33,8 @@ extension NSIndexSet {
     func bs_indexPathsForSection(section: Int) -> [NSIndexPath] {
         var indexPaths: [NSIndexPath] = []
         
-        enumerateIndexesUsingBlock { (index, _) -> Void in
-            indexPaths.append(NSIndexPath(forItem: index, inSection: section))
+        enumerate { (index, _) -> Void in
+            indexPaths.append(NSIndexPath(item: index, section: section))
         }
         
         return indexPaths

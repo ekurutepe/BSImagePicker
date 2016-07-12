@@ -28,21 +28,21 @@ Gives UICollectionViewDataSource functionality with a given data source and cell
 */
 final class PhotoCollectionViewDataSource : NSObject, UICollectionViewDataSource {
     var selections = [PHAsset]()
-    var fetchResult: PHFetchResult
+    var fetchResult: PHFetchResult<AnyObject>
     
     private let photoCellIdentifier = "photoCellIdentifier"
-    private let photosManager = PHCachingImageManager.defaultManager()
-    private let imageContentMode: PHImageContentMode = .AspectFill
+    private let photosManager = PHCachingImageManager.default()
+    private let imageContentMode: PHImageContentMode = .aspectFill
     
     let settings: BSImagePickerSettings?
-    var imageSize: CGSize = CGSizeZero
+    var imageSize: CGSize = CGSize()
     
-  init(fetchResult: PHFetchResult, selections: PHFetchResult? = nil, settings: BSImagePickerSettings?) {
+  init(fetchResult: PHFetchResult<AnyObject>, selections: PHFetchResult<AnyObject>? = nil, settings: BSImagePickerSettings?) {
         self.fetchResult = fetchResult
         self.settings = settings
         if let selections = selections {
             var selectionsArray = [PHAsset]()
-            selections.enumerateObjectsUsingBlock { (asset, idx, stop) -> Void in
+            selections.enumerateObjects { (asset, idx, stop) -> Void in
                 if let asset = asset as? PHAsset {
                     selectionsArray.append(asset)
                 }
@@ -57,13 +57,13 @@ final class PhotoCollectionViewDataSource : NSObject, UICollectionViewDataSource
         return 1
     }
     
-    func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return fetchResult.count
     }
     
-    func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         UIView.setAnimationsEnabled(false)
-        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(photoCellIdentifier, forIndexPath: indexPath) as! PhotoCell
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: photoCellIdentifier, for: indexPath) as! PhotoCell
         if let settings = settings {
             cell.settings = settings
         }
@@ -77,21 +77,21 @@ final class PhotoCollectionViewDataSource : NSObject, UICollectionViewDataSource
             cell.asset = asset
             
             // Request image
-            cell.tag = Int(photosManager.requestImageForAsset(asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
+            cell.tag = Int(photosManager.requestImage(for: asset, targetSize: imageSize, contentMode: imageContentMode, options: nil) { (result, _) in
                 cell.imageView.image = result
             })
             
             // Set selection number
-            if let asset = fetchResult[indexPath.row] as? PHAsset, let index = selections.indexOf(asset) {
+            if let asset = fetchResult[indexPath.row] as? PHAsset, let index = selections.index(of: asset) {
                 if let character = settings?.selectionCharacter {
                     cell.selectionString = String(character)
                 } else {
                     cell.selectionString = String(index+1)
                 }
                 
-                cell.selected = true
+                cell.isSelected = true
             } else {
-                cell.selected = false
+                cell.isSelected = false
             }
         }
         
@@ -101,6 +101,6 @@ final class PhotoCollectionViewDataSource : NSObject, UICollectionViewDataSource
     }
     
     func registerCellIdentifiersForCollectionView(collectionView: UICollectionView?) {
-        collectionView?.registerNib(UINib(nibName: "PhotoCell", bundle: BSImagePickerViewController.bundle), forCellWithReuseIdentifier: photoCellIdentifier)
+        collectionView?.register(UINib(nibName: "PhotoCell", bundle: BSImagePickerViewController.bundle), forCellWithReuseIdentifier: photoCellIdentifier)
     }
 }

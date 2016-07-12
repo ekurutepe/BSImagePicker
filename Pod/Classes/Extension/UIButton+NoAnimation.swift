@@ -38,7 +38,7 @@ extension UIButton {
         UIView.setAnimationsEnabled(false)
         
         // Set title without the default animation
-        self.setTitle(title, forState: state)
+        self.setTitle(title, for: state)
         self.layoutIfNeeded()
         
         // Enable animations if animation where enabled before
